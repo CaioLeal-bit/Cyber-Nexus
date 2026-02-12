@@ -2,8 +2,26 @@
 """
 Cyber Nexus - Jogo Educacional de Algoritmos de Grafos
 Autores: Pedro Henrique Faria e Caio Leal Granja
-Versão Corrigida para 1920x1080 - Bug de botões corrigido
+Versão Corrigida para Compatibilidade com DPI Scaling
 """
+
+# Fix para DPI scaling do Windows - ESSENCIAL para notebooks
+import ctypes
+import os
+
+# Configuração de DPI para evitar zoom automático do Windows
+try:
+    # Para Windows 8.1 e 10
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    try:
+        # Para Windows Vista, 7 e 8
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
+# Centralizar janela
+os.environ['SDL_VIDEO_CENTERED'] = '1'
 
 import pygame
 import sys
@@ -15,9 +33,20 @@ from enum import Enum
 # Inicialização do Pygame
 pygame.init()
 
-# Constantes para 1920x1080
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+# Obter informações da tela
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h
+
+# Usar resolução fixa de 1920x1080 mas adaptar ao display
+if screen_width >= 1920 and screen_height >= 1080:
+    SCREEN_WIDTH = 1920
+    SCREEN_HEIGHT = 1080
+else:
+    # Se a tela for menor, usar resolução nativa com margens
+    SCREEN_WIDTH = min(screen_width, 1920)
+    SCREEN_HEIGHT = min(screen_height - 50, 1080)  # Deixar espaço para barra de tarefas
+
 FPS = 60
 
 # Cores Cyberpunk
@@ -312,7 +341,8 @@ def generate_random_graph(num_nodes=12, min_x=250, max_x=1670, min_y=250, max_y=
 
 class CyberNexus:
     def __init__(self):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # Criar janela com flag SCALED para melhor tratamento de DPI
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED | pygame.RESIZABLE)
         pygame.display.set_caption("Cyber Nexus - Jogo Educacional de Grafos")
         self.clock = pygame.time.Clock()
         self.running = True
@@ -339,12 +369,13 @@ class CyberNexus:
         
     def setup_main_menu(self):
         """Tela principal do jogo"""
+        center_x = SCREEN_WIDTH // 2
         self.buttons = [
-            Button(SCREEN_WIDTH//2 - 200, 400, 400, 80, "TUTORIAL", 
+            Button(center_x - 200, 400, 400, 80, "TUTORIAL", 
                    lambda: self.change_state(GameState.TUTORIAL_INTRO)),
-            Button(SCREEN_WIDTH//2 - 200, 520, 400, 80, "COMEÇAR A JOGAR", 
+            Button(center_x - 200, 520, 400, 80, "COMEÇAR A JOGAR", 
                    lambda: self.change_state(GameState.PHASE_1_INTRO)),
-            Button(SCREEN_WIDTH//2 - 200, 640, 400, 80, "SAIR", 
+            Button(center_x - 200, 640, 400, 80, "SAIR", 
                    lambda: self.quit_game()),
         ]
         
@@ -729,7 +760,6 @@ class CyberNexus:
         self.message_color = COLOR_SUCCESS
         self.player_path = []
         
-        # CORREÇÃO: Manter o botão VERIFICAR quando tentar novamente
         if self.state == GameState.PHASE_1_PLAY:
             self.buttons = [
                 Button(100, 950, 250, 70, "TENTAR EU MESMO",
@@ -896,7 +926,7 @@ class CyberNexus:
             
     def draw_legend(self):
         """Desenhar legenda de cores e informações do grafo"""
-        panel_x = 1550
+        panel_x = SCREEN_WIDTH - 370
         panel_y = 50
         panel_width = 320
         panel_height = 250
